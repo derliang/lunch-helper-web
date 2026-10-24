@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="午餐小幫手">
+  <rect width="512" height="512" rx="112" fill="#ff8fab"/>
+  <circle cx="256" cy="262" r="206" fill="#ffe4ec" opacity=".6"/>
+  <path d="M256 92c22 0 36 12 48 32l96 164c12 22 12 40 0 60s-30 28-56 28H168c-26 0-44-8-56-28s-12-38 0-60l96-164c12-20 26-32 48-32z" fill="#f4e6e8" transform="translate(0 10)"/>
+  <path d="M256 92c22 0 36 12 48 32l96 164c12 22 12 40 0 60s-30 28-56 28H168c-26 0-44-8-56-28s-12-38 0-60l96-164c12-20 26-32 48-32z" fill="#fff"/>
+  <rect x="196" y="292" width="120" height="92" rx="18" fill="#4a3e46"/>
+  <circle cx="214" cy="232" r="9" fill="#5b4552"/>
+  <circle cx="298" cy="232" r="9" fill="#5b4552"/>
+  <circle cx="186" cy="258" r="12" fill="#ffaabe" opacity=".8"/>
+  <circle cx="326" cy="258" r="12" fill="#ffaabe" opacity=".8"/>
+  <path d="M240 244q16 14 32 0" fill="none" stroke="#5b4552" stroke-width="6" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>午餐小幫手</title>
+<meta name="description" content="午餐小幫手：訂便當、統計數量與金額、儲值記帳的網頁版工具。">
+<link rel="icon" href="../icon.png">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+<main>
+  <header><img class="seal" src="../icon.png" alt="" width="52" height="52"><h1>午餐小幫手</h1></header>
+  <p>午餐小幫手是給導師、班級或辦公室負責訂餐的人用的網頁版工具：建立店家與菜單、開訂購單、幫同學或同事登記餐點，自動算出每種餐點的份數、總金額、每個人要付多少，還有儲值記帳與收錢勾選。</p>
+  <p><a class="btn" href="../">開始使用</a></p>
+  <p class="dim">打開網頁就能用，不需要安裝。可以用 Safari 的「加入主畫面」或 Chrome 的「安裝應用程式」，像一般 App 一樣開啟。</p>
+
+  <h2>主要功能</h2>
+  <ul>
+    <li><b>店家與菜單</b>：店名、電話、地圖連結、logo；餐點分主餐、飲料、點心、其他，可附照片。</li>
+    <li><b>訂購單</b>：選店家、設截止時間，截止前可修改；「還沒點的人」一鍵複製提醒文字。</li>
+    <li><b>代點</b>：負責人幫每個人登記餐點與份數，截止後也能改。</li>
+    <li><b>統計與收錢</b>：依品項的份數（跟店家訂餐用）、依人的餐點與金額（收錢用），勾選已付款、已領餐。</li>
+    <li><b>儲值記帳</b>：先儲值、送出訂單時自動扣款，餘額不足會提醒；每一筆都有紀錄。</li>
+    <li><b>用餐日與負責人排班</b>、<b>投票選店家</b>、<b>愛心評分與評論</b>。</li>
+    <li>資料是一份 Excel 檔，可用 Excel 或 Google 試算表直接打開。</li>
+  </ul>
+
+  <h2>資料存在哪裡</h2>
+  <p>第一次打開時選擇：</p>
+  <ul>
+    <li><b>用 Google 帳號同步</b>：資料存成「午餐小幫手資料.xlsx」放在<b>你自己的 Google 雲端硬碟</b>。手機、平板、電腦打開同一個網址、登入同一個帳號，就是同一份資料。</li>
+    <li><b>只存在這台裝置</b>：不用登入，資料只在這個瀏覧器裡，可隨時下載成 Excel。</li>
+    <li><b>存到電腦上的 Excel 檔</b>：電腦版 Chrome、Edge 可以選一個檔案，之後自動存回。</li>
+  </ul>
+  <p>App 只申請 <code>https://www.googleapis.com/auth/drive.file</code> 這一個權限，只能存取由本 App 建立的檔案，<b>看不到你雲端硬碟裡的其他檔案</b>。開發者沒有自己的伺服器或資料庫，你的資料不會傳給開發者。</p>
+
+  <h2>和 Google Apps Script 版的差別</h2>
+  <p>原本的午餐小幫手跑在 Google Apps Script 上，同學可以各自用手機點餐。網頁版沒有伺服器，所以是由<b>負責人在自己的裝置上</b>幫大家登記（代點）；不會寄信、沒有多班級。需要同學自己點餐的話，請用 GAS 版部署。</p>
+  <p>詳細說明請見 <a href="../privacy/">隱私權政策</a>。</p>
+
+  <footer>
+    <p>開發者聯絡信箱：<a href="mailto:derliang@gmail.com">derliang@gmail.com</a></p>
+    <p><a href="../">開啟 App</a>・<a href="../privacy/">隱私權政策</a></p>
+  </footer>
+</main>
+</body>
+</html>
