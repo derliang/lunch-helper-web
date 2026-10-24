@@ -1,5 +1,5 @@
 // 讓網頁版在沒有網路時也能開啟：先用快取，背景再更新（下次開啟就是新版）。
-var CACHE = 'lunch-helper-1.2.0-mvlzz0mh';
+var CACHE = 'lunch-helper-1.2.0-mvm0o61n';
 var SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon.png', 'icon.svg'];
 
 self.addEventListener('install', function (e) {
