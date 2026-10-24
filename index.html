@@ -8104,11 +8104,24 @@
       H.forEach(function (x) { [24, 16, 8, 0].forEach(function (sh) { var v = (x >>> sh) & 0xff; out.push(v > 127 ? v - 256 : v); }); });
       return out;
     }
+    /**
+     * 可重現的亂數：每次呼叫後端時記下用掉的亂數（log），重做同一個操作時先餵回去（queue），
+     * 權杖、編號、初始密碼才會和原本一樣（不然同步重做後，這台裝置存的權杖就對不上）。
+     */
+    var rng = {
+      queue: [], log: [],
+      next: function () {
+        var v = rng.queue.length ? rng.queue.shift() : Math.random();
+        rng.log.push(v);
+        return v;
+      }
+    };
+    var FakeMath = Object.create(Math);
+    FakeMath.random = function () { return rng.next(); };
     function uuid() {
-      if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
       var s = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
       return s.replace(/[xy]/g, function (c) {
-        var r = (Math.random() * 16) | 0;
+        var r = (rng.next() * 16) | 0;
         return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
       });
     }
@@ -8280,8 +8293,10 @@
 
     return {
       state: state,
+      rng: rng,
       clearCache: CacheService._clear,
       globals: {
+        Math: FakeMath,
         SpreadsheetApp: SpreadsheetApp,
         PropertiesService: PropertiesService,
         CacheService: CacheService,
@@ -8375,11 +8390,14 @@
 
     self.has = function (fn) { return !!server.__fns[fn]; };
 
-    function exec(fn, args) {
+    /** replay：重做時用原本的時間與亂數，結果（權杖、編號、時間戳）才會一樣。 */
+    function exec(fn, args, replay) {
       var f = server.__fns[fn];
       if (!f) throw new Error('找不到 ' + fn);
-      nowBase = Math.max(RealDate.now(), self.lastNow + 1);
-      self.lastNow = nowBase;
+      nowBase = replay && replay.t ? replay.t : Math.max(RealDate.now(), self.lastNow + 1);
+      if (nowBase > self.lastNow) self.lastNow = nowBase;
+      fake.rng.queue = replay && replay.r ? replay.r.slice() : [];
+      fake.rng.log = [];
       server.__reset(); // 每次呼叫都像 GAS 的一個新請求：記憶體裡的暫存清掉
       var r = f.apply(null, JSON.parse(JSON.stringify(args || [])));
       return r === undefined ? null : JSON.parse(JSON.stringify(r));
@@ -8390,17 +8408,18 @@
       args = args || [];
       var seq0 = self.seq;
       var data;
+      var rec = function () { return { f: fn, a: args, t: nowBase, r: fake.rng.log.slice() }; };
       try {
         data = exec(fn, args);
       } catch (e) {
         if (self.seq !== seq0) { // 做到一半出錯：資料可能已改了一部分，照樣記下來並存檔
-          self.ops.push({ f: fn, a: args });
+          self.ops.push(rec());
           if (self.onChange) self.onChange();
         }
         throw e;
       }
       var did = self.seq !== seq0;
-      if (did && !self.readOnly[fn]) self.ops.push({ f: fn, a: args });
+      if (did && !self.readOnly[fn]) self.ops.push(rec());
       if (self.onChange && did) self.onChange();
       return data;
     };
@@ -8414,7 +8433,7 @@
       self.uploadedSeq = ++self.seq;
       ops.forEach(function (op) {
         try {
-          exec(op.f, op.a);
+          exec(op.f, op.a, op);
         } catch (e) {
           if (typeof console !== 'undefined') console.warn('重做操作失敗：' + op.f + '：' + (e && e.message));
         }
@@ -8672,7 +8691,7 @@ var Drive = (function () {
       opts = opts || {};
       var q = "name = '" + String(name).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "' and trashed = false" +
         (opts.folder ? " and mimeType = '" + FOLDER_MIME + "'" : '') + (opts.parent ? " and '" + opts.parent + "' in parents" : '');
-      return self.json(API + '?spaces=drive&orderBy=modifiedTime desc&fields=files(id,name,version,modifiedTime)&q=' + encodeURIComponent(q), null, opts.interactive)
+      return self.json(API + '?spaces=drive&orderBy=modifiedTime desc&fields=files(id,name,version,md5Checksum,modifiedTime)&q=' + encodeURIComponent(q), null, opts.interactive)
         .then(function (r) { return r.files || []; });
     },
     list: function (parent) {
@@ -8680,7 +8699,7 @@ var Drive = (function () {
       return self.json(API + '?spaces=drive&orderBy=createdTime desc&pageSize=200&fields=files(id,name,createdTime)&q=' + encodeURIComponent(q)).then(function (r) { return r.files || []; });
     },
     meta: function (id) {
-      return self.json(API + '/' + id + '?fields=id,name,version,modifiedTime,trashed,webViewLink');
+      return self.json(API + '/' + id + '?fields=id,name,version,md5Checksum,modifiedTime,trashed,webViewLink');
     },
     download: function (id) {
       return self.fetch(API + '/' + id + '?alt=media').then(function (r) { return r.arrayBuffer(); }).then(function (b) { return new Uint8Array(b); });
@@ -8717,14 +8736,14 @@ var Drive = (function () {
         bytes,
         '\r\n--' + boundary + '--'
       ]);
-      return self.json(UPLOAD + '?uploadType=multipart&fields=id,name,version,modifiedTime,webViewLink', {
+      return self.json(UPLOAD + '?uploadType=multipart&fields=id,name,version,md5Checksum,modifiedTime,webViewLink', {
         method: 'POST',
         headers: { 'Content-Type': 'multipart/related; boundary=' + boundary },
         body: body
       });
     },
     update: function (id, bytes, mime) {
-      return self.json(UPLOAD + '/' + id + '?uploadType=media&fields=id,version,modifiedTime', {
+      return self.json(UPLOAD + '/' + id + '?uploadType=media&fields=id,version,md5Checksum,modifiedTime', {
         method: 'PATCH',
         headers: { 'Content-Type': mime || XLSX_MIME },
         body: new Blob([bytes])
@@ -9099,7 +9118,7 @@ Providers.google = {
   label: 'Google 雲端硬碟',
   check: function () {
     return Drive.meta(WEB.meta.fileId).then(function (m) {
-      return m.trashed ? { missing: true } : { version: String(m.version) };
+      return m.trashed ? { missing: true } : { version: String(m.md5Checksum || m.version) };
     }, function (e) {
       if (e.status === 404) return { missing: true };
       throw e;
@@ -9107,12 +9126,12 @@ Providers.google = {
   },
   download: function () { return Drive.download(WEB.meta.fileId); },
   upload: function (bytes) {
-    return Drive.update(WEB.meta.fileId, bytes).then(function (r) { return { version: String(r.version) }; });
+    return Drive.update(WEB.meta.fileId, bytes).then(function (r) { return { version: String(r.md5Checksum || r.version) }; });
   },
   recreate: function (bytes) {
     return Drive.create(DATA_FILE, bytes).then(function (r) {
       WEB.meta.fileId = r.id;
-      return { version: String(r.version) };
+      return { version: String(r.md5Checksum || r.version) };
     });
   }
 };
@@ -9288,7 +9307,7 @@ var Cloud = {
         if (!files.length) {
           return Drive.create(DATA_FILE, WEB.rt.toXlsx()).then(function (r) {
             WEB.meta.fileId = r.id;
-            WEB.meta.version = String(r.version);
+            WEB.meta.version = String(r.md5Checksum || r.version);
             WEB.rt.uploadedSeq = WEB.rt.seq;
             WEB.rt.ops = [];
             return 'created';
@@ -9303,7 +9322,7 @@ var Cloud = {
           return choose.then(function (how) {
             if (!how) throw Object.assign(new Error('已取消'), { cancelled: true });
             WEB.meta.fileId = f.id;
-            WEB.meta.version = String(f.version);
+            WEB.meta.version = String(f.md5Checksum || f.version);
             if (how === 'device') { WEB.rt.ops = []; WEB.rt.touch(); return how; }
             WEB.setState(remote, how === 'merge');
             return how;
